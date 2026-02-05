@@ -1,0 +1,61 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+__MACOSX/
+
+# Logs / temp
+*.log
+tmp/
+_tmp*/
+cache/
+
+# Data & experiment outputs (keep repo clean)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.npz
+*.npy
+*.pt
+*.pth
+*.ckpt
+
+# COLMAP outputs (common)
+sparse/
+dense/
+stereo/
+meshed-poisson.ply
+meshed-delaunay.ply
+
+# Project-specific experiment folders
+exp/
+experiments/
+outputs/
+runs/
+plots/
+
+# Local config
+.env
+*.env
+config.toml
+secrets.toml
+
+# venv
+.venv/
+
+#uv files
+uv.lock
