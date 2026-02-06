@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess
+from pathlib import Path
+
 import numpy as np
 
 from .geometry import qvec_to_rotmat
@@ -18,12 +19,19 @@ def ensure_txt_model(model_dir: Path, *, out_dir: Path | None = None, colmap_exe
 
     out_dir = Path(out_dir) if out_dir is not None else (model_dir.parent / (model_dir.name + "_txt"))
     out_dir.mkdir(parents=True, exist_ok=True)
-    subprocess.run([
-        colmap_exe, "model_converter",
-        "--input_path", str(model_dir),
-        "--output_path", str(out_dir),
-        "--output_type", "TXT",
-    ], check=True)
+    subprocess.run(
+        [
+            colmap_exe,
+            "model_converter",
+            "--input_path",
+            str(model_dir),
+            "--output_path",
+            str(out_dir),
+            "--output_type",
+            "TXT",
+        ],
+        check=True,
+    )
     return out_dir
 
 

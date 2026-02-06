@@ -34,7 +34,7 @@ cache/
 *.pth
 *.ckpt
 
-# COLMAP outputs (common)
+# COLMAP outputs
 sparse/
 dense/
 stereo/
@@ -48,14 +48,8 @@ outputs/
 runs/
 plots/
 
-# Local config
+# Local config (template config.yaml is tracked; *.local.yaml is not)
+*.local.yaml
+*.local.env
 .env
-*.env
-config.toml
 secrets.toml
-
-# venv
-.venv/
-
-#uv files
-uv.lock

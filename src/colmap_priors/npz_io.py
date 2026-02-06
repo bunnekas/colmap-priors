@@ -32,7 +32,7 @@ def load_pi3_npz(npz_path: Path) -> dict[str, np.ndarray]:
     paths = z["image_paths"]
 
     out: dict[str, np.ndarray] = {}
-    for T, p in zip(poses, paths):
+    for T, p in zip(poses, paths, strict=True):
         out[Path(str(p)).name] = np.asarray(T, dtype=np.float64)
     return out
 
@@ -82,7 +82,7 @@ def load_centers_npz(npz_path: str | Path, *, key: str = "centers") -> dict[str,
 
 def load_da3_npz_centers(npz_path: Path) -> dict[str, np.ndarray]:
     """Load DA3 NPZ camera centers (try multiple possible keys)."""
-    
+
     for key in ("centers", "camera_centers", "C_world", "extrinsics_raw", "extrinsics"):
         try:
             return load_centers_npz(npz_path, key=key)

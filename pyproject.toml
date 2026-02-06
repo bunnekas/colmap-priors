@@ -1,28 +1,45 @@
 [project]
-name = "colmap_priors"
-version = "0.1.1"
-description = "COLMAP pose/position priors pipeline (Pi3 + DepthAnything3) with Sim(3) alignment and eval plots"
+name = "colmap-priors"
+version = "0.2.0"
+description = "COLMAP pose / position priors pipeline with Sim(3) alignment and evaluation plots."
 readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
 dependencies = [
   "numpy>=1.23",
   "matplotlib>=3.7",
+  "pyyaml>=6.0",
 ]
 
 [project.scripts]
 colmap-priors = "colmap_priors.run_scene:main"
 
+[dependency-groups]
+dev = [
+  "ruff>=0.9",
+  "pytest>=8",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build]
-include = [
-  "src/colmap_priors/**",
-  "scripts/**",
-  "README.md",
-  "pyproject.toml",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/colmap_priors"]
+
+# ── Ruff ─────────────────────────────────────────────────────────────────────
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["colmap_priors"]
+
+# ── Pytest ───────────────────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -25,7 +25,7 @@ def umeyama(X: np.ndarray, Y: np.ndarray) -> tuple[float, np.ndarray, np.ndarray
         Vt[-1, :] *= -1
         R = Vt.T @ U.T
 
-    varY = (Yc ** 2).sum() / n
+    varY = (Yc**2).sum() / n
     s = (S.sum() / varY) if varY > 0 else 1.0
     t = muX - s * (R @ muY)
     return float(s), R.astype(np.float64), t.astype(np.float64)

@@ -59,17 +59,15 @@ def feature_extractor(
     try:
         _run(cmd)
     except subprocess.CalledProcessError as e:
-        # Some COLMAP builds don’t support --image_list_path for feature_extractor.
+        # Some COLMAP builds don't support --image_list_path for feature_extractor.
         # If so, retry without it.
         out = str(getattr(e, "output", "") or "")
-        if image_list_path is not None and out and (
-            "image_list_path" in out
-            or "unrecognized option" in out
-            or "Unknown option" in out
+        if (
+            image_list_path is not None
+            and out
+            and ("image_list_path" in out or "unrecognized option" in out or "Unknown option" in out)
         ):
-            print(
-                "[WARN] COLMAP build does not support --image_list_path for feature_extractor; retrying without it."
-            )
+            print("[WARN] COLMAP build does not support --image_list_path for feature_extractor; retrying without it.")
             cmd_fallback = [
                 colmap_exe,
                 "feature_extractor",
@@ -89,12 +87,34 @@ def exhaustive_matcher(db: Path, *, colmap_exe: str = "colmap") -> None:
 
 def mapper(db: Path, image_dir: Path, out_sparse: Path, *, colmap_exe: str = "colmap") -> None:
     out_sparse.mkdir(parents=True, exist_ok=True)
-    _run([colmap_exe, "mapper", "--database_path", str(db), "--image_path", str(image_dir), "--output_path", str(out_sparse)])
+    _run(
+        [
+            colmap_exe,
+            "mapper",
+            "--database_path",
+            str(db),
+            "--image_path",
+            str(image_dir),
+            "--output_path",
+            str(out_sparse),
+        ]
+    )
 
 
 def model_to_txt(model_dir: Path, out_txt: Path, *, colmap_exe: str = "colmap") -> None:
     out_txt.mkdir(parents=True, exist_ok=True)
-    _run([colmap_exe, "model_converter", "--input_path", str(model_dir), "--output_path", str(out_txt), "--output_type", "TXT"])
+    _run(
+        [
+            colmap_exe,
+            "model_converter",
+            "--input_path",
+            str(model_dir),
+            "--output_path",
+            str(out_txt),
+            "--output_type",
+            "TXT",
+        ]
+    )
 
 
 def pose_prior_mapper(
@@ -106,13 +126,23 @@ def pose_prior_mapper(
     colmap_exe: str = "colmap",
 ) -> None:
     out_sparse.mkdir(parents=True, exist_ok=True)
-    _run([
-        colmap_exe, "pose_prior_mapper",
-        "--database_path", str(db),
-        "--image_path", str(image_dir),
-        "--output_path", str(out_sparse),
-        "--overwrite_priors_covariance", "1",
-        "--prior_position_std_x", str(prior_std),
-        "--prior_position_std_y", str(prior_std),
-        "--prior_position_std_z", str(prior_std),
-    ])
+    _run(
+        [
+            colmap_exe,
+            "pose_prior_mapper",
+            "--database_path",
+            str(db),
+            "--image_path",
+            str(image_dir),
+            "--output_path",
+            str(out_sparse),
+            "--overwrite_priors_covariance",
+            "1",
+            "--prior_position_std_x",
+            str(prior_std),
+            "--prior_position_std_y",
+            str(prior_std),
+            "--prior_position_std_z",
+            str(prior_std),
+        ]
+    )
