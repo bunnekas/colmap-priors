@@ -4,23 +4,21 @@ import argparse
 import contextlib
 import glob
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import numpy as np
 
 from .sim3 import apply_sim3, umeyama
 
-
 # ---------------------------
 # Shared small utilities
 # ---------------------------
 
+
 def _iter_images_sorted(image_dir: Path) -> list[str]:
     images = sorted(
-        f
-        for f in glob.glob(os.path.join(str(image_dir), "*"))
-        if f.lower().endswith((".jpg", ".jpeg", ".png"))
+        f for f in glob.glob(os.path.join(str(image_dir), "*")) if f.lower().endswith((".jpg", ".jpeg", ".png"))
     )
     if not images:
         raise RuntimeError(f"No images found in {image_dir}")
@@ -30,6 +28,7 @@ def _iter_images_sorted(image_dir: Path) -> list[str]:
 # ---------------------------
 # Pi3 exporter (NPZ)
 # ---------------------------
+
 
 def _pi3_build_image_paths(image_dir: Path, interval: int, n_expected: int) -> list[str]:
     """Rebuild image_paths in the same order as pi3.utils.basic.load_images_as_tensor.
@@ -77,13 +76,13 @@ def export_pi3_to_npz(
     # Lazy imports (optional deps)
     import torch  # type: ignore
 
-    from .external_repos import add_repo_to_syspath
+    from .external_repos import add_vendor_to_syspath
 
-    add_repo_to_syspath("PI3_REPO")
+    add_vendor_to_syspath("PI3")
     from pi3.models.pi3 import Pi3  # type: ignore
     from pi3.utils.basic import load_images_as_tensor  # type: ignore
 
-    def get_device(device_arg: str) -> "torch.device":
+    def get_device(device_arg: str) -> torch.device:
         if device_arg == "cuda" and not torch.cuda.is_available():
             print("[Pi3] CUDA not available, falling back to CPU.")
             return torch.device("cpu")
@@ -166,9 +165,7 @@ def main_pi3(argv: Iterable[str] | None = None) -> int:
         "--ckpt",
         type=str,
         default=None,
-        help=(
-            "Path to Pi3 checkpoint. If not provided, uses Pi3.from_pretrained()."
-        ),
+        help=("Path to Pi3 checkpoint. If not provided, uses Pi3.from_pretrained()."),
     )
     args = p.parse_args(list(argv) if argv is not None else None)
 
@@ -185,6 +182,7 @@ def main_pi3(argv: Iterable[str] | None = None) -> int:
 # ---------------------------
 # DepthAnything3 exporter (NPZ)
 # ---------------------------
+
 
 def export_da3_to_npz(
     *,
@@ -213,9 +211,9 @@ def export_da3_to_npz(
     # Lazy imports (optional deps)
     import torch  # type: ignore
 
-    from .external_repos import add_repo_to_syspath
+    from .external_repos import add_vendor_to_syspath
 
-    add_repo_to_syspath("DA3_REPO")
+    add_vendor_to_syspath("DA3")
     from depth_anything_3.api import DepthAnything3  # type: ignore
 
     image_dir = Path(image_dir)
@@ -240,9 +238,7 @@ def export_da3_to_npz(
     if dev.type == "cuda" and autocast:
         major, _ = torch.cuda.get_device_capability()
         mp_dtype = torch.bfloat16 if major >= 8 else torch.float16
-        autocast_ctx: contextlib.AbstractContextManager[None] = torch.amp.autocast(
-            "cuda", dtype=mp_dtype
-        )
+        autocast_ctx: contextlib.AbstractContextManager[None] = torch.amp.autocast("cuda", dtype=mp_dtype)
         print(f"[DA3] autocast dtype={mp_dtype}")
     else:
         autocast_ctx = contextlib.nullcontext()
@@ -258,9 +254,8 @@ def export_da3_to_npz(
             break
         print(f"[DA3] window {start}:{end} (n={b})")
 
-        with torch.no_grad():
-            with autocast_ctx:
-                pred = model_obj.inference(batch_paths)
+        with torch.no_grad(), autocast_ctx:
+            pred = model_obj.inference(batch_paths)
 
         extr = np.asarray(pred.extrinsics)  # (B,3,4)
         if extr.ndim != 3 or extr.shape[1:] != (3, 4):
@@ -292,9 +287,7 @@ def export_da3_to_npz(
             write_from = ov
             centers_global[start + write_from : end] = c_glob[write_from:, :]
 
-            ov_rmse = np.sqrt(
-                np.mean(np.sum((apply_sim3(y, s, r_sim, t_sim) - x) ** 2, axis=1))
-            )
+            ov_rmse = np.sqrt(np.mean(np.sum((apply_sim3(y, s, r_sim, t_sim) - x) ** 2, axis=1)))
             print(f"[DA3] stitch overlap rmse={ov_rmse:.4g}  (centers=w2c)")
 
         if end == n:

@@ -1,22 +1,31 @@
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
+# Repo root (two levels up from this file: src/colmap_priors/ -> repo root)
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
-def add_repo_to_syspath(env_var: str) -> None:
-    """Prepend an external repo path (from an env var) to sys.path.
+# Vendored submodule directories.
+VENDOR_PI3 = _REPO_ROOT / "vendor" / "Pi3"
+VENDOR_DA3 = _REPO_ROOT / "vendor" / "Depth-Anything-3"
 
-    This is used by the Pi3/DA3 exporters that live in *other* repos/venvs.
-    It keeps this package importable while letting the model code be imported
-    from its own checkout.
-    """
+_VENDOR: dict[str, Path] = {
+    "PI3": VENDOR_PI3,
+    "DA3": VENDOR_DA3,
+}
 
-    repo = os.environ.get(env_var, "")
-    if not repo:
-        return
 
-    p = str(Path(repo).resolve())
+def add_vendor_to_syspath(model: str) -> None:
+    """Prepend the vendored submodule for *model* (``"PI3"`` or ``"DA3"``) to ``sys.path``."""
+    vendor_dir = _VENDOR.get(model)
+    if vendor_dir is None:
+        raise ValueError(f"Unknown vendor model {model!r}; expected one of {sorted(_VENDOR)}")
+    if not vendor_dir.is_dir():
+        raise FileNotFoundError(
+            f"Vendor submodule not found at {vendor_dir}. "
+            "Run `git submodule update --init --recursive` (or `just vendor`)."
+        )
+    p = str(vendor_dir.resolve())
     if p not in sys.path:
         sys.path.insert(0, p)

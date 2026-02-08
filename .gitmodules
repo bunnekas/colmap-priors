@@ -1,0 +1,6 @@
+[submodule "vendor/Pi3"]
+	path = vendor/Pi3
+	url = https://github.com/yyfz/Pi3.git
+[submodule "vendor/Depth-Anything-3"]
+	path = vendor/Depth-Anything-3
+	url = https://github.com/ByteDance-Seed/Depth-Anything-3.git
