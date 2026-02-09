@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
 import sqlite3
-from typing import Iterable
+from collections.abc import Iterable
+from pathlib import Path
 
 import numpy as np
 
-from .poses import PoseSet
-from .geometry import qvec_to_rotmat
-
+from .geometry import PoseSet, qvec_to_rotmat
 
 PRIOR_Q_COLS = ["prior_qw", "prior_qx", "prior_qy", "prior_qz"]
 PRIOR_T_COLS = ["prior_tx", "prior_ty", "prior_tz"]
@@ -99,8 +97,13 @@ def write_priors(db_path: Path, poseset: PoseSet, *, strict: bool = True) -> Non
                     WHERE image_id=?;
                     """,
                     (
-                        float(p.qvec[0]), float(p.qvec[1]), float(p.qvec[2]), float(p.qvec[3]),
-                        float(C[0]), float(C[1]), float(C[2]),
+                        float(p.qvec[0]),
+                        float(p.qvec[1]),
+                        float(p.qvec[2]),
+                        float(p.qvec[3]),
+                        float(C[0]),
+                        float(C[1]),
+                        float(C[2]),
                         image_id,
                     ),
                 )
@@ -118,9 +121,7 @@ def write_priors(db_path: Path, poseset: PoseSet, *, strict: bool = True) -> Non
                 pass
 
         if strict and missing:
-            raise RuntimeError(
-                f"{len(missing)} priors did not match any COLMAP image name. Example: {missing[0]}"
-            )
+            raise RuntimeError(f"{len(missing)} priors did not match any COLMAP image name. Example: {missing[0]}")
 
         # Also populate pose_priors table when present (COLMAP >= 3.14 dev).
         if _has_table(cur, "pose_priors"):
@@ -197,9 +198,7 @@ def write_position_priors(
             )
 
         if strict and missing:
-            raise RuntimeError(
-                f"{len(missing)} priors did not match any COLMAP image name. Example: {missing[0]}"
-            )
+            raise RuntimeError(f"{len(missing)} priors did not match any COLMAP image name. Example: {missing[0]}")
 
         if _has_table(cur, "pose_priors"):
             cols = _table_info(cur, "pose_priors")

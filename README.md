@@ -4,235 +4,95 @@
   <img src="examples/courhouse_baseline.png" width="45.9%" />
   <img src="examples/courhouse_da3.png" width="45%" />
 </p>
+<p align="center"><em>Tanks-and-Temples Courthouse – baseline (left) vs DA3 position priors (right).</em></p>
 
-<p align="center">
-  <em>COLMAP GUI visualization of TanksAndTemples – Courthouse scene.</em><br/>
-  Left: Baseline reconstruction · Right: Reconstruction with DA3 priors
-</p>
+COLMAP pipeline that injects pose/position priors from [Pi3](https://github.com/yyfz/Pi3) and [DepthAnything3](https://github.com/ByteDance-Seed/Depth-Anything-3) into `pose_prior_mapper`, with Sim(3) alignment against a reference model and trajectory evaluation plots.
 
-`colmap_priors` is a **single-entry COLMAP pipeline** for running reconstructions on sequential scenes (e.g., Tanks-and-Temples \<SCENE>) and evaluating how **pose/position priors** from external models affect the resulting trajectory.
+## Getting started
 
-It supports:
-
-- **Baseline**: standard COLMAP mapping (used as the reference gauge, if you want)
-- **Pi3 priors**: export Pi3 poses → Sim(3) align to reference → inject pose priors → `pose_prior_mapper`
-- **DA3 priors**: export DA3 centers (with window stitching) → Sim(3) align to reference → inject position priors → `pose_prior_mapper`
-- **Evaluation plots**: per-comparison PNGs plus an additional *grid/raster* plot; optional per-image reprojection error coloring for `*_post` models, with **global color normalization** across all `kind="model"` plots
-
-A deliberate design choice: the Python package itself depends only on **NumPy** + **Matplotlib**. Heavy dependencies (Torch / Pi3 / DA3) stay in their own venvs, and exporters are invoked via wrapper scripts.
-
----
-
-## What this repo produces
-
-For a \<SCENE>, the pipeline can produce:
-
-- `colmap_baseline/` (optional)
-- `pi3/` reconstruction and `pi3_predictions.npz`
-- `da3/` reconstruction and `da3_predictions.npz`
-- `plots/`:
-  - one PNG per comparison (e.g., `pi3_pre`, `pi3_post`, `da3_pre`, `da3_post`)
-  - one additional combined grid image (e.g., `2x2` for four plots)
-
-`*_pre` plots visualize aligned predictions in the reference gauge.
-`*_post` plots visualize the reconstructed COLMAP model after priors injection.
-
----
-
-## Repo layout
-
-- `src/colmap_priors/run_scene.py`
-  - Orchestrates everything: DB creation, feature extraction, matching, optional baseline mapping, exporting predictions (via wrappers), alignment/injection, `pose_prior_mapper`, plots.
-
-- `src/colmap_priors/export_poses.py`
-  - Consolidated exporter logic for Pi3 and DA3.
-  - Imports heavy dependencies lazily at runtime **inside the model venv**.
-
-- `scripts/export_pi3_poses.py`, `scripts/export_da3_poses.py`
-  - Thin wrappers that add this repo’s `src/` to `sys.path` and call `colmap_priors.export_poses:main_pi3` / `main_da3`.
-
-- `scripts/export_poses.py`
-  - Optional dispatcher that runs `pi3` / `da3` exporters using `PI3_PYTHON` / `DA3_PYTHON`.
-
-- `src/colmap_priors/eval.py`
-  - Plotting only (no duplicated Sim(3) logic).
-  - Global reprojection-error colormap normalization across all `kind="model"` plots.
-  - Adds `std=<PRIOR_POSITION_STD>` to plot titles.
-
----
-
-## Prerequisites
-
-### 1) COLMAP
-
-You need a COLMAP build that provides the commands used by this pipeline:
-
-- `colmap database_creator`
-- `colmap feature_extractor`
-- `colmap exhaustive_matcher`
-- `colmap mapper`
-- `colmap model_converter` (used by `model_to_txt`)
-- `colmap pose_prior_mapper`
-
-Verify on your machine:
+Requires COLMAP with `pose_prior_mapper` support, Python >= 3.10, [uv](https://docs.astral.sh/uv/), and optionally [just](https://github.com/casey/just).
 
 ```bash
-colmap -h | head
-colmap pose_prior_mapper -h
+git clone --recurse-submodules https://github.com/bunnekas/colmap_priors.git
+cd colmap_priors
+uv sync                        # pipeline env (numpy, matplotlib, pyyaml)
+just vendor-install             # separate venvs for Pi3 and DA3 under vendor/
 ```
 
-If `pose_prior_mapper` is missing, you must install/build a COLMAP version that includes it.
-
-### 2) Python environment for the pipeline
-
-The pipeline env should be lightweight. The recommended path is `uv`:
+Copy the config template, point it at your data, and run a scene:
 
 ```bash
-uv sync
+cp config.yaml config.local.yaml
+# edit config.local.yaml — at minimum set data_root and exp_root
+just run Courthouse
 ```
 
-This installs only `numpy` and `matplotlib` (plus build tooling).
-
-### 3) Model environments (Pi3 and DA3)
-
-Pi3 and DA3 should each live in their own checkout + venv (Torch, model code, weights, etc.).
-You then point this pipeline to their Python interpreters:
-
-- `PI3_PYTHON=/path/to/Pi3/.venv/bin/python`
-- `DA3_PYTHON=/path/to/Depth-Anything-3/.venv/bin/python`
-
-And their repo roots:
-
-- `PI3_REPO=/path/to/Pi3`
-- `DA3_REPO=/path/to/Depth-Anything-3`
-
-The exporters use these repo paths to import the model modules.
-
----
-
-## Data layout
-
-Expected scene structure under `DATA_ROOT` (Tanks-and-Temples convention):
-
-```text
-DATA_ROOT/
-  <SCENE>/
-    images/
-      000000.jpg
-      000001.jpg
-      ...
-    sparse/
-      0/
-        cameras.bin
-        images.bin
-        points3D.bin
-```
-
-The `sparse/0` folder is optional if you set `RUN_BASELINE_MAP=1` and let the baseline reconstruction become the reference gauge.
-
----
-
-## Quick start
-
-1) Configure `scripts/colmap_priors.env`
-
-Copy and edit the template:
-
-```bash
-cp scripts/colmap_priors.env scripts/colmap_priors.local.env
-$EDITOR scripts/colmap_priors.local.env
-```
-
-2) Run the pipeline:
-
-```bash
-uv sync
-uv run colmap-priors <SCENE> --env scripts/colmap_priors.local.env
-```
-
-Artifacts will be written under `EXP_ROOT/<SCENE>/`.
-
----
+If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive` first.
 
 ## Configuration
 
-The pipeline reads simple `KEY=VALUE` pairs from the `--env` file.
+All settings live in a single YAML file (see [`config.yaml`](config.yaml) for defaults and comments).
+The important ones:
 
-### Required keys
+| Key | Description |
+|---|---|
+| `data_root` | Root folder with scene subdirectories (each containing `images/`) |
+| `exp_root` | Output directory |
+| `prior_position_std` | Position prior std-dev passed to `pose_prior_mapper` |
+| `run_pi3` / `run_da3` | Which model branches to run |
+| `run_baseline` | Whether to also run vanilla COLMAP mapper |
+| `run_plot` | Generate trajectory comparison plots |
 
-- `DATA_ROOT` – path containing the scene folders
-- `EXP_ROOT` – where outputs are written
-- `PRIOR_POSITION_STD` – standard deviation used in `pose_prior_mapper` (also shown in plot titles)
+Model Python interpreters default to `vendor/<model>/.venv/bin/python` — override with `pi3_python` / `da3_python` if needed.
 
-### Common optional keys
+## What it does
 
-- `COLMAP_EXE` – override `colmap` binary name/path (default: `colmap`)
-- `REF_MODEL_DIR` – explicit reference model directory (e.g., `${DATA_ROOT}/<SCENE>/sparse/0`)
-  - If unset and `RUN_BASELINE_MAP=1`, the baseline model is used as reference
+Per scene, the pipeline runs:
 
-- `MAX_IMAGES` – if >0, uniformly subsample images and run on that subset
+1. Feature extraction + exhaustive matching (shared DB)
+2. Optional baseline COLMAP reconstruction
+3. Model inference (Pi3 poses or DA3 depth-based centers), run in the model's own venv
+4. Sim(3) alignment of predictions to a reference model (Umeyama)
+5. Prior injection into the COLMAP database
+6. `pose_prior_mapper` reconstruction
+7. Trajectory plots comparing against the reference
 
-- Toggles:
-  - `RUN_BASELINE_MAP` (0/1)
-  - `RUN_PI3` (0/1)
-  - `RUN_DA3` (0/1)
-  - `RUN_PLOT` (0/1)
+## `just` recipes
 
-- Pi3 exporter knobs:
-  - `PI3_INTERVAL` (default `1`)
-
-- DA3 exporter knobs:
-  - `DA3_WINDOW` (default `10`)
-  - `DA3_OVERLAP` (default `6`)
-  - `DA3_AUTocast` (0/1, default `1`)
-
----
-
-## Exporters (standalone)
-
-You can run exporters without the full pipeline.
-
-### Using the dispatcher
-
-```bash
-python scripts/export_poses.py --env scripts/colmap_priors.local.env pi3 -- --image_dir /path/to/images --output /tmp/pi3.npz
-python scripts/export_poses.py --env scripts/colmap_priors.local.env da3 -- --image_dir /path/to/images --output /tmp/da3.npz --window 10 --overlap 6 --autocast
+```
+just sync              install pipeline deps
+just vendor-install    set up model venvs (Pi3, DA3)
+just run <SCENE>       run full pipeline
+just run-batch S1 S2   multiple scenes
+just export-pi3 ...    run Pi3 exporter standalone
+just export-da3 ...    run DA3 exporter standalone
+just lint / fmt        ruff
+just test              pytest
+just init-config       copy config template
 ```
 
-### Calling wrappers directly
+Use `just --set config other.yaml run Courthouse` to point at a different config.
 
-```bash
-${PI3_PYTHON} scripts/export_pi3_poses.py --image_dir ... --output ...
-${DA3_PYTHON} scripts/export_da3_poses.py --image_dir ... --output ...
+## Directory structure
+
+Input data:
+```
+data_root/<SCENE>/images/       # jpg/png frames
+data_root/<SCENE>/sparse/0/     # optional reference model
 ```
 
----
-
-## Output structure
-
-A typical output tree (under `EXP_ROOT/<SCENE>/`) looks like:
-
-```text
-EXP_ROOT/<SCENE>/
-  image_list.txt
-  base.db
-  colmap_baseline/
-    sparse/0/ ...
-    sparse/0_txt/ cameras.txt images.txt points3D.txt
-  pi3/
-    database.db
-    pi3_predictions.npz
-    sparse/0/ ...
-    sparse/0_txt/ ...
-  da3/
-    database.db
-    da3_predictions.npz
-    sparse/0/ ...
-    sparse/0_txt/ ...
-  plots/
-    trajectories.png
-    trajectories_grid.png
-    ... (one PNG per comparison)
+Outputs:
+```
+exp_root/<SCENE>/
+  base.db                       # shared feature/match DB
+  colmap_baseline/sparse/0/     # baseline reconstruction (if enabled)
+  pi3/                          # predictions, DB, reconstruction
+  da3/                          # predictions, DB, reconstruction
+  plots/                        # comparison PNGs
 ```
 
-`base.db` is the feature/match database copied for the Pi3/DA3 runs. Each model run uses its own `database.db` so that priors injection does not affect the baseline DB.
+## Code overview
+
+The pipeline entry point is `src/colmap_priors/run_scene.py`. Model inference lives in `export_poses.py` with lazy torch imports so the main pipeline stays light. Alignment and DB injection go through `align_and_inject.py` which uses `sim3.py` (Umeyama) under the hood. Pi3 and DA3 run in their own venvs via `scripts/export.py`.
+
+The two models are vendored as git submodules under `vendor/`. Each gets its own `.venv` created by `just vendor-install`.

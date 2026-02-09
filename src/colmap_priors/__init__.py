@@ -1,1 +1,1 @@
-__all__ = ["run_scene"]
+__all__ = ["PipelineConfig", "load_config", "run_scene"]

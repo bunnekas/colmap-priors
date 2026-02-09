@@ -1,0 +1,33 @@
+# colmap_priors pipeline configuration
+# Copy to config.local.yaml and edit before running:
+#   cp config.yaml config.local.yaml
+
+# --- Paths ----------------------------------------------------------------
+data_root: /path/to/dataset          # root folder containing scene directories
+exp_root: /path/to/experiments       # where outputs are written
+# ref_model_dir: /path/to/sparse/0  # optional reference model; if unset uses data_root/<scene>/sparse/0
+# colmap_exe: colmap                 # optional COLMAP binary override
+
+# --- Priors ----------------------------------------------------------------
+prior_position_std: 0.001
+
+# --- Pipeline steps --------------------------------------------------------
+run_baseline: false
+run_pi3: false
+run_da3: true
+run_plot: true
+
+# --- Subsampling -----------------------------------------------------------
+max_images: 0  # 0 = use all images
+
+# --- Model interpreters (default: vendor/<model>/.venv/bin/python) ---------
+# pi3_python: /path/to/python
+# da3_python: /path/to/python
+
+# --- Pi3 knobs -------------------------------------------------------------
+pi3_interval: 1
+
+# --- DA3 knobs -------------------------------------------------------------
+da3_window: 20
+da3_overlap: 10
+da3_autocast: true

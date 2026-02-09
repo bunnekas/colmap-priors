@@ -1,17 +1,16 @@
 from __future__ import annotations
-import os
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 import numpy as np
 
-from .colmap_model import ensure_txt_model, load_images_txt_centers
 from .align_and_inject import align_centers_to_reference
+from .colmap_model import ensure_txt_model, load_images_txt_centers
 from .npz_io import (
+    load_da3_npz_centers,
     load_npz_order,
     load_pi3_npz,
-    load_da3_npz_centers,
 )
 
 
@@ -147,14 +146,14 @@ def load_reference_centers(
 
 
 def _solid_color_for_label(label: str) -> str:
-    l = label.lower()
-    if l == "pi3_pre":
+    tag = label.lower()
+    if tag == "pi3_pre":
         return "red"
-    if l == "da3_post":
+    if tag == "da3_post":
         return "red"
-    if l == "pi3_post":
+    if tag == "pi3_post":
         return "tab:blue"
-    if l == "da3_pre":
+    if tag == "da3_pre":
         return "tab:orange"
     return "tab:green"
 
@@ -179,6 +178,7 @@ def _plot_one(
     std_str: str | None = None,
 ) -> Path:
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.collections import LineCollection
@@ -252,18 +252,20 @@ def _plot_one(
 
 def _write_grid_plot(paths: list[Path], out_path: Path) -> Path:
     import math
+
     import matplotlib
+
     matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
     import matplotlib.image as mpimg
+    import matplotlib.pyplot as plt
 
     k = len(paths)
     if k == 0:
         return out_path
 
     # grid: choose near-square
-    cols = int(math.ceil(math.sqrt(k)))
-    rows = int(math.ceil(k / cols))
+    cols = math.ceil(math.sqrt(k))
+    rows = math.ceil(k / cols)
 
     fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 4 * rows))
     if rows == 1 and cols == 1:
@@ -302,6 +304,7 @@ def plot_trajectories(
     with_errors: bool = True,
     aspect: str = "auto",
     ref_common_only: bool = True,
+    prior_std: float | None = None,
 ) -> Path:
     """One PNG per comparison item + an additional raster grid plot.
 
@@ -312,13 +315,10 @@ def plot_trajectories(
     out_dir = out_path.parent
     stem = out_path.stem
 
-    prior_std = os.environ.get("PRIOR_POSITION_STD")
-    std_str = f"{float(prior_std):.4g}" if prior_std is not None else None
+    std_str = f"{prior_std:.4g}" if prior_std is not None else None
 
     # Load reference once
-    _, ref_order, ref_centers = load_reference_centers(
-        reference_model, tmp_txt_dir=tmp_txt_dir, colmap_exe=colmap_exe
-    )
+    _, ref_order, ref_centers = load_reference_centers(reference_model, tmp_txt_dir=tmp_txt_dir, colmap_exe=colmap_exe)
 
     by_label = {lbl: (lbl, kind, Path(p)) for (lbl, kind, p) in items}
     preferred = ["pi3_pre", "pi3_post", "da3_pre", "da3_post"]
@@ -327,7 +327,7 @@ def plot_trajectories(
     # ---------- Pre-pass: compute global error normalization over ALL model plots ----------
     global_err_vals: list[np.ndarray] = []
     if with_errors:
-        for label, kind, path in ordered_items:
+        for _label, kind, path in ordered_items:
             if kind != "model":
                 continue
             if not Path(path).exists():
